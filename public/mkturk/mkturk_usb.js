@@ -364,6 +364,18 @@ serial.Port.prototype.writepumpdurationtoUSB = async function(data){
 	updateHeadsUpDisplayDevices()
 } //port.writepumpdurationUSB
 
+//PORT - transferOut Camera
+serial.Port.prototype.writeCameraTriggertoUSB = async function(data){
+	let msgstr = "$" + data.toString() + "%" // start($), end(%) characters
+	let textEncoder = new TextEncoder();
+	await this.device_.transferOut(4, textEncoder.encode(msgstr)); //SANITY CHECK what the 4 is
+
+	port.statustext_sent = "TRANSFERRED CHAR --> USB:" + msgstr
+	// console.log(port.statustext_sent)
+	updateHeadsUpDisplayDevices()
+} //port.writepumpdurationUSB
+
+
 //PORT - disconnect
 serial.Port.prototype.disconnect = async function() {
 	await this.device_.controlTransferOut({

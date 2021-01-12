@@ -1014,14 +1014,22 @@ while(true){
         var t0=CURRTRIAL.tsequence[CURRTRIAL.tsequence.length-1]
         var sampleon = chooseArrayElement(IMAGES["Sample"][CURRTRIAL.sample_scenebag_label[i][0]].durationMS, CURRTRIAL.sample_scenebag_index[i][0],0)
 
-        //Timing: blankdurationpre, sampleon, framerate
+  		//Timing: blankdurationpre, sampleon, framerate
+        if (typeof TASK.SamplePRE === 'undefined' || TASK.SamplePRE === null) {  // variable is undefined or null
+          var blankdurationpre = 100 // default to 100ms
+        }
+        else{
+          var blankdurationpre = Task.SamplePRE // use provided value
+        }
+
+     /*   //Timing: blankdurationpre, sampleon, framerate
         if (i==0){
             var blankdurationpre = Math.max(100,TASK.SampleOFF)
         }//if first blank, prepend at least 100ms
         else{
             var blankdurationpre = TASK.SampleOFF
         }
-
+*/
         //Create Movie Sequence
         [movie_sequence, movie_tsequence, movie_framenum] = 
         createMovieSeq("Sample",blankdurationpre, sampleon, TASK.SampleOFF, ENV.FrameRateMovie)
@@ -1400,6 +1408,8 @@ if (typeof(teston) == "undefined"){
             }//IF trackeye
             var p1 = hold_promise(0,boundingBoxesSampleFixation,FLAGS.punishOutsideTouch)
             var p2 = displayTrial(CURRTRIAL.tsequence, CURRTRIAL.sequencegridindex, CURRTRIAL.sequenceframe, CURRTRIAL.sequencetaskscreen, CURRTRIAL.sequencelabel, CURRTRIAL.sequenceindex)
+            var p3 = port.writeCameraTriggertoUSB("1")
+            await Promise.all([p3])
             CURRTRIAL.samplestarttime=Date.now() - ENV.CurrentDate.valueOf();
             CURRTRIAL.samplestarttime_string = new Date(Date.now()).toJSON()
             var race_return = await Promise.race([p1,p2])
@@ -1434,6 +1444,11 @@ if (typeof(teston) == "undefined"){
             CURRTRIAL.samplestarttime_string = new Date(Date.now()).toJSON()            
 			await displayTrial(CURRTRIAL.tsequence, CURRTRIAL.sequencegridindex, CURRTRIAL.sequenceframe,
 								CURRTRIAL.sequencetaskscreen, CURRTRIAL.sequencelabel, CURRTRIAL.sequenceindex)
+		//Send a 1 to signal camera to turn on
+        var p1 = port.writeCameraTriggertoUSB("1")
+        await Promise.all([p1])
+
+
         }//ELSE !RSVP, no fixation hold
         logEVENTS("SampleFixationTouchEvent",CURRTRIAL.samplefixationtouchevent,"trialseries")
         logEVENTS("SampleFixationXYT",CURRTRIAL.samplefixationxyt,"trialseries")
@@ -1715,6 +1730,20 @@ if (typeof(teston) == "undefined"){
 		playSound(3);
 		await Promise.all([p1,p2])
 	}//ELSEIF wrong, then timeout
+
+	// Trigger camera off independent of trial outcome
+	var p3 = port.writeCameraTriggertoUSB("0")
+	await Promise.all([p3])
+    // Log trial end time
+    CURRTRIAL.samplesendtime=Date.now() - ENV.CurrentDate.valueOf();
+    CURRTRIAL.sampleendtime_string = new Date(Date.now()).toJSON()
+    logEVENTS("TrialEndTime",CURRTRIAL.samplesendtime,"trialseries")
+
+
+
+
+
+
 	//============ (end) DELIVER REWARD/PUNISH ============//
 
 
