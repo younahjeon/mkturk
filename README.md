@@ -1,4 +1,3 @@
-#HELLO 
 # mkturk
 Wireless touchscreen behavioral training
 
