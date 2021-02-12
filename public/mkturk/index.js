@@ -384,7 +384,7 @@ if (ENV.BatteryAPIAvailable) {
 	//================== AWAIT USER CAN EDIT SUBJECT PARAMS ==================//
 	if (QuickLoad.load == 0) {
 		updateStatusText(JSON.stringify(TASK, null, ' '));
-    document.querySelector("p[id=headsuptext]").setAttribute("contentEditable", true);
+    	document.querySelector("p[id=headsuptext]").setAttribute("contentEditable", true);
 		document.querySelector("button[id=doneEditingParams]").style.display = "block";
 		document.querySelector("button[id=doneEditingParams]").style.visibility = "visible";
 
@@ -709,6 +709,7 @@ if (ENV.BatteryAPIAvailable) {
       // 5: animate <--> render loop within trial
 
       //============ 0: LOAD SCENES from JSON ============//
+      // Note that the sounds are also in the SceneFiles and so 
       for (let i = 0; i < TASK.ImageBagsSample.length; i++) {
         IMAGES.Sample[i] = await loadTextfromFirebase(TASK.ImageBagsSample[i]);
       }
@@ -717,15 +718,19 @@ if (ENV.BatteryAPIAvailable) {
         IMAGES.Test[i] = await loadTextfromFirebase(TASK.ImageBagsTest[i]);
       }
 
-      // find the longest scene param arry in IMAGES (ie # of trials)
+      // find the longest scene param array in IMAGES (ie # of trials)
       for (let i = 0; i < IMAGES.Sample.length; i++) {
         IMAGES.Sample[i].nimages = getLongestArray(IMAGES.Sample[i]);
         IMAGES.Test[i].nimages = getLongestArray(IMAGES.Test[i]);
 
-        //Determine if images will also be rendered
-			  IMAGES.Sample[i].nbackgroundimages = IMAGES.Sample[i].IMAGES.imageidx.length;
+        // Determine if images will also be rendered
+		IMAGES.Sample[i].nbackgroundimages = IMAGES.Sample[i].IMAGES.imageidx.length;
         IMAGES.Test[i].nbackgroundimages = IMAGES.Test[i].IMAGES.imageidx.length;
         
+		// Determine if sounds will also be played -- but don't require the scenefile to have a SOUNDS field
+		IMAGES.Sample[i].nsounds = (typeof IMAGES.Sample[i].SOUNDS == "undefined") ? 0 : IMAGES.Sample[i].SOUNDS.soundidx.length; 
+		// AK TODO: implement for test, as well
+
         FLAGS.movieper['Sample'][i] = [];
         FLAGS.movieper['Test'][i] = [];
       }
