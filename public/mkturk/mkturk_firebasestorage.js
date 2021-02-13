@@ -13,32 +13,69 @@ async function loadTextfromFirebase(textfile_path){
 
 //------------- LOAD IMAGE --------------//
 async function loadImagefromFirebase(imagefile_path){
-try{
-	var imagefileRef = await storage.ref().child(imagefile_path)
-	var url = await imagefileRef.getDownloadURL()
-	.catch((error) => console.log(error));
+	try{
+		var imagefileRef = await storage.ref().child(imagefile_path)
+		var url = await imagefileRef.getDownloadURL()
+		.catch((error) => console.log(error));
 
-	return new Promise(
-		function(resolve, reject){
-			try {
-				var image = new Image(); 
-				image.crossOrigin = "Anonymous"; //to allow saving of a 'tainted canvas', see https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image
-				image.onload = function(){
-					updateImageLoadingAndDisplayText('Loaded: ' + imagefile_path)
-					resolve(image)				
-				}
-				image.src = url
-			} //try
-			catch (error){
-				console.log(error)
-			} //catch
-		}
-	) //Promise
-}
-catch (error){
-	console.log(error)
-}
+		return new Promise(
+			function(resolve, reject){
+				try {
+					var image = new Image(); 
+					image.crossOrigin = "Anonymous"; //to allow saving of a 'tainted canvas', see https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image
+					image.onload = function(){
+						updateImageLoadingAndDisplayText('Loaded: ' + imagefile_path)
+						resolve(image)				
+					}
+					image.src = url
+				} //try
+				catch (error){
+					console.log(error)
+				} //catch
+			}
+		) //Promise
+	}
+	catch (error){
+		console.log(error)
+	}
 } //ReadFromFirebase
+
+
+//------------- LOAD AUDIO --------------//
+function loadSoundfromFirebaseForCache(fullpath){
+	return new Promise(async function(resolve,reject){
+		try {
+			var fileRef = storage.ref().child(fullpath)
+			url = await fileRef.getDownloadURL()
+			response = await fetch(url)
+			fileBlob = await response.blob()
+
+			var reader = new FileReader()
+			reader.onload = function(e){
+
+// // promises not used in safari webkit decodeAudioData
+// 				audiocontext.decodeAudioData(reader.result).then(function(buffer){
+// 					sounds.buffer[idx] = buffer;
+// 					resolve(idx)				
+// 				})
+
+				// Cross-browser compatible: doesn't use promises
+				audiocontext.decodeAudioData(reader.result, (buffer) => { 
+					// sounds.buffer[idx] = buffer; // AK: assign this to something else
+					// resolve(idx)	
+					resolve(buffer)
+				 }, (e) => { reject(e); });	
+				 			
+			} //reader.onload
+			reader.readAsArrayBuffer(fileBlob)
+		} //try
+		catch (error){
+			console.error(error)
+			reject('reject')
+		}//catch
+	})//promise
+} //loadSoundfromFirebase
+
 
 
 //------------- LOAD MESH --------------//
@@ -48,8 +85,9 @@ async function loadMeshfromFirebase(meshfile_path){
 		var meshfileRef = await storage.ref().child(meshfile_path)
 		var url = await meshfileRef.getDownloadURL().catch((error) => console.log(error));
 
+		// AK TODO: can we swap this with `filename.split('.').pop()`? As it stands, this is not robust to dots in the filename...
 		var strs = meshfile_path.split(".")
-		var ext = strs[1]
+		var ext = strs[1] 
 
 		if (ext == 'gltf' || ext == 'glb'){
 			var loader = new THREE.GLTFLoader()
@@ -119,7 +157,7 @@ async function getFileListRecursiveFirebase(dir,ext){
 		} //if file extension required
 	}
 	return files
-} //recursviely accumulate files from subfolders (if any)
+} //recursively accumulate files from subfolders (if any)
 
 
 //======================================//
@@ -129,8 +167,9 @@ async function getFileListRecursiveFirebase(dir,ext){
 
 
 //------- LIST IMAGES FROM MULTIPLE FOLDERS -------//
-async function loadImageBagPathsParallelFirebase(imagebagroots){
-	var imagepath_promises = imagebagroots.map(file => getFileListRecursiveFirebase(file,'.png')); //create array of recursive path load Promises
+async function loadImageBagPathsParallelFirebase(imagebagroots, file_ext='png'){
+	// AK added the <file_ext> variable so the same function can work for SoundBags as well
+	var imagepath_promises = imagebagroots.map(file => getFileListRecursiveFirebase(file,'.' + file_ext)); //create array of recursive path load Promises
 	var funcreturn = await Promise.all(imagepath_promises);
 	//Assemble images and add labels
 	var bagitems_paths = [] // Can also be paths to a single .png file. 
@@ -144,7 +183,10 @@ async function loadImageBagPathsParallelFirebase(imagebagroots){
 	return [bagitems_paths, bagitems_labels] 
 }
 
+
 async function loadImageArrayfromFirebase(imagepathlist){
+	// AK: Note that nothing in this is specific to images, so I use this 
+	// for sounds as well, despite the function name and variables are a misnomer
 	try{
 		var MAX_SIMULTANEOUS_REQUESTS = 2600 // Need to empirically test GCS API's download request limit in a "short" amount of time.
 		var MAX_TOTAL_REQUESTS = 5200 // Not empirically tested yet
@@ -166,7 +208,15 @@ async function loadImageArrayfromFirebase(imagepathlist){
 
 				var partial_image_requests = []
 				for (var j = 0; j<partial_pathlist.length; j++){
-					partial_image_requests.push(loadImagefromFirebase(partial_pathlist[j]))
+					// Note: At this point I'm hard-coding for the wav extension. May be nice to generalize, but this is a standalone func and doesn't have object properties...
+					is_wav_file = partial_pathlist[j][0].split('.').pop()=='wav'; // just take the first element of the list
+					if (is_wav_file) { 
+						partial_image_requests.push(loadSoundfromFirebaseForCache(partial_pathlist[j]));
+					}
+					else {
+						partial_image_requests.push(loadImagefromFirebase(partial_pathlist[j]));	
+					}
+					
 				}
 
 				var partial_image_array = await Promise.all(partial_image_requests)
@@ -176,8 +226,13 @@ async function loadImageArrayfromFirebase(imagepathlist){
 		}
 		else { // If number of images is less than MAX_SIMULTANEOUS_REQUESTS, request them all simultaneously: 
 			for (var i = 0; i < 3; i++){
-				var image_requests = imagepathlist.map(loadImagefromFirebase);
-
+				if (imagepathlist.length==0 || imagepathlist[0].split('.').pop()!='wav') {
+					var image_requests = imagepathlist.map(loadImagefromFirebase);
+				}
+				else {
+					var image_requests = imagepathlist.map(loadSoundfromFirebaseForCache);
+				}
+				
 				console.log('FIREBASE: Buffering ' + imagepathlist.length + ' images')
 				var tstart = performance.now()
 				var image_array = await Promise.all(image_requests)

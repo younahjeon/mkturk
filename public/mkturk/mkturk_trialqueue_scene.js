@@ -9,6 +9,7 @@ constructor(samplingStrategy){
 	this.sampleq.index = []; 
 	this.sampleq.filename = [];
 	this.samplebucket = [];
+	this.sound_samplebucket = [];
 
 	this.testq = {}
 	this.testq.indices = []; 
@@ -19,7 +20,7 @@ constructor(samplingStrategy){
 	this.currentbag = -1;
 
 	// ImageBuffer
-	this.IB = new ImageBuffer(); 
+	this.IB = new ImageBuffer(); // AK: "ImageBuffer" is a bit of a misnomer, as I've extended it to handle sounds, as well
 
 	// Settings 
 	this.max_queue_size = 5200; // Max number of trials (and their images) to have prepared from now; to improve browser performance
@@ -52,6 +53,35 @@ async build(trial_cushion_size){
 		this.samplebag_block_indices[i] = i;
 	}
 
+
+	// Generate audio sample sound bags
+	this.sound_samplebag_labels = [];
+	this.sound_samplebag_indices = [];
+	this.sound_samplebag_paths = [];
+	for (var i=0; i<=IMAGES["Sample"].length-1; i++){
+		for (var j=0; j<=IMAGES["Sample"][i].nsounds-1; j++){
+			this.sound_samplebag_labels.push(i);
+			this.sound_samplebag_indices.push(j);
+		} // for j scene renders, assign the label for the image
+
+		// get the sounds, if any
+		if (IMAGES["Sample"][i].nsounds > 0){
+			var funcreturn = await loadImageBagPathsParallelFirebase([IMAGES["Sample"][i].SOUNDS.soundbag], 'wav'); // 2nd arg is the file ext
+			this.sound_samplebag_paths[i] = funcreturn[0];
+		}
+		else {
+			this.sound_samplebag_paths[i] = [];
+		}
+	} // for i scene bags (labels)
+
+	this.sound_samplebag_block_indices = new Array(this.sound_samplebag_labels.length);
+	for (var i = 0; i<=this.sound_samplebag_labels.length-1; i++){
+		this.sound_samplebag_block_indices[i] = i;
+	}
+
+	// // AK TODO: implement for test sounds, as well
+
+
 	this.testbag_labels = [];
 	this.testbag_paths = [];
 	this.testbag_indices = [];
@@ -71,13 +101,20 @@ async build(trial_cushion_size){
 		}
 	} //for i scene bags (labels)
 
+
 	for (var i=0; i<=this.samplebag_indices.length-1; i++){
 		this.samplebucket.push(i)
+	}
+	for (var i=0; i<=this.sound_samplebag_indices.length-1; i++){
+		this.sound_samplebucket.push(i)
 	}
 
 	// array of zeros
 	this.ntrials_per_bag = new Array(Math.max(...this.samplebag_labels)+1)
 	this.ntrials_per_bag.fill(0,0,this.ntrials_per_bag.length)
+
+	this.sound_n_trials_per_bag = new Array(Math.max(... this.sound_samplebag_labels)+1)
+	this.sound_n_trials_per_bag.fill(0,0,this.sound_n_trials_per_bag.length);
 
 	console.log('this.build() will generate ' + trial_cushion_size + ' trials')
 	await this.generate_trials(trial_cushion_size); 
@@ -97,7 +134,8 @@ async generate_trials(n_trials){
 		return 
 	}
 
-	var image_requests = []; 
+	var image_requests = [];
+	var sound_requests = []; 
 
 	// console.log('TQ.generate_trials() will generate '+n_trials+' trials')
 	for (var i = 0; i < n_trials; i++){
@@ -131,7 +169,7 @@ async generate_trials(n_trials){
 		} // if sample all bags vs blocks
 
 		// Draw one (1) sample image from samplebag
-		var sample_index = this.selectSampleImage(this.samplebag_block_indices, this.samplingStrategy)
+		var sample_index = this.selectSampleStimulus(this.samplebag_block_indices, this.samplingStrategy)
 		var sample_scenebag_label = this.samplebag_labels[sample_index]; 
 		var sample_scenebag_index = this.samplebag_indices[sample_index];
 
@@ -147,8 +185,30 @@ async generate_trials(n_trials){
 		 image_requests.push(sample_filename)
 		}//ELSE single image
 
-		this.ntrials_per_bag[sample_scenebag_label] = this.ntrials_per_bag[sample_scenebag_label] + 1
-				
+		this.ntrials_per_bag[sample_scenebag_label] += 1;
+		
+		// Draw a sample sound, as well
+		var sound_sample_index = this.selectSampleStimulus(this.sound_samplebag_indices, this.samplingStrategy, false) // final argument is for <is_image>
+		var sound_sample_scenebag_label = this.sound_samplebag_labels[sample_index];
+		var sound_sample_scenebag_index = this.sound_samplebag_indices[sample_index];
+
+		var sound_sample_filename = [];
+		if (Array.isArray(IMAGES["Sample"][sound_sample_scenebag_label].SOUNDS.soundidx[sound_sample_scenebag_index])) {
+			for (var j=0; j<IMAGES["Sample"][sound_sample_scenebag_label].SOUNDS.soundidx[sound_sample_scenebag_index].length; j++){
+				sound_sample_filename.push(this.sound_samplebag_paths[sound_sample_scenebag_label][IMAGES["Sample"][sound_sample_scenebag_label].SOUNDS.soundidx[sound_sample_scenebag_index][j]] || "")
+			}
+			sound_requests.push(... sound_sample_filename);
+		}
+		else {
+			sound_sample_filename = this.sound_samplebag_paths[sample_scenebag_label][IMAGES["Sample"][sound_sample_scenebag_label].SOUNDS.soundidx[sound_sample_scenebag_index]] || "";
+			sound_requests.push(sound_sample_filename)
+		}
+
+		this.sound_n_trials_per_bag[sound_sample_scenebag_label] += 1;
+
+		// AK TODO: implement for test sounds?
+
+
 		// Select appropriate test images (correct one and distractors) 
 		var funcreturn = this.selectTestImages(sample_scenebag_label, this.testbag_labels) 
 		var test_filenames = []
@@ -186,9 +246,11 @@ async generate_trials(n_trials){
 
 		this.num_in_queue++;
 	}
-	// Download images to support these trials to download queue
+	// Download images and sounds to support these trials to download queue
 	// console.log("TQ.generate_trials() will request", image_requests.length)
-	await this.IB.cache_these_images(image_requests); 	
+	await this.IB.cache_these_images(image_requests); // AK TODO: combine these two into a single joint promise --  Promise.all()?
+	await this.IB.cache_these_images(sound_requests); // AK: uncomment
+
 } //FUNCTION generate_trials
 
 
@@ -305,36 +367,46 @@ async get_next_trial(){
 } //FUNCTION get_next_trial
 
 
-selectSampleImage(samplebag_indices, SamplingStrategy){
+selectSampleStimulus(samplebag_indices, SamplingStrategy, is_image=true){
+	// AK renamed to be general to stimuli, and lightly modified to extend
 
-//global bucket
-if (this.samplebucket.length == 0){
-	for (var i=0; i<=samplebag_indices.length-1; i++){
-		this.samplebucket.push(i)
+	// Don't worry, JS does pointers like Python, so <samplebucket> points to this.sample_bucket; it doesn't copy it
+	if (is_image) {
+		var samplebucket = this.samplebucket;
 	}
-}//Need to make a new bucket
+	else {
+		var samplebucket = this.sound_samplebucket;
+	}
+	
+
+	//global bucket
+	if (samplebucket.length == 0){
+		for (var i=0; i<=samplebag_indices.length-1; i++){
+			samplebucket.push(i)
+		}
+	}//Need to make a new bucket
 
 
 	// Vanilla random uniform sampling with replacement: 
-	var sample_image_index = NaN
+	var sample_stimulus_index = NaN
 	if(SamplingStrategy == 'uniform_with_replacement'){
-		sample_image_index = this.samplebucket[Math.floor((this.samplebucket.length)*Math.random())];
+		sample_stimulus_index = samplebucket[Math.floor((samplebucket.length)*Math.random())];
 	}
 	else if (SamplingStrategy == 'uniform_without_replacement'){
-		var randind = Math.floor((this.samplebucket.length)*Math.random())
-		sample_image_index = this.samplebucket[randind]
-		this.samplebucket.splice(randind,1)
+		var randind = Math.floor((samplebucket.length)*Math.random())
+		sample_stimulus_index = samplebucket[randind]
+		samplebucket.splice(randind,1)
 	}
 	else if (SamplingStrategy == 'sequential'){
-		sample_image_index = this.samplebucket[0] //take next image
-		this.samplebucket.splice(0,1)
+		sample_stimulus_index = samplebucket[0] //take next image
+		samplebucket.splice(0,1)
 	}
 	else {
-		throw SamplingStrategy + " not implemented in selectSampleImage."
+		throw SamplingStrategy + " not implemented in selectSampleStimulus."
 	}
 
-	return sample_image_index
-}//FUNCTION selectSampleImage
+	return sample_stimulus_index
+}//FUNCTION selectSampleStimulus
 
 selectTestImages(correct_label, testbag_labels){
 	

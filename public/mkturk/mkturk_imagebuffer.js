@@ -52,13 +52,19 @@ async clear_cache(){
 }
 
 async cache_these_images(imagenames){
+	// AK: this is now a bit of a misnomer, as I've extended to audio
 	try{
 
 		if (typeof(imagenames) == "string" && imagenames != ""){
 			var filename = imagenames; 
 			if (!(filename in this.cache_dict)){
-
-				var image = await loadImagefromFirebase(filename);
+				is_wav_file = filename.split('.').pop()=='wav';
+				if (is_wav_file) {
+					var image = await loadSoundfromFirebase(filename);
+				}
+				else {
+					var image = await loadImagefromFirebase(filename);
+				}
 
 				this.cache_dict[filename] = image; 
 				this.num_elements_in_cache++
