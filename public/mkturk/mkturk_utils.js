@@ -197,6 +197,19 @@ async function playSound(idx){
   // source.connect(audiocontext.destination);       // connect the source to the context's destination (the speakers)
   source.start(0);                        // play the source now
 }
+
+function playSoundFromBuffer(sound_in_buffer){ // AK removed the async
+  audiocontext.resume()
+  var source = audiocontext.createBufferSource(); // creates a sound source
+  source.buffer = sound_in_buffer; // tell the source which sound to play
+  // gainNode.gain.value=0.15; //set boost pedal to 15% volume // AK potentially use this..
+  source.connect(gainNode);
+  // gainNode.connect(audiocontext.destination); //Connect boost pedal to output
+  // source.connect(audiocontext.destination);       // connect the source to the context's destination (the speakers)
+  source.start(0);                        // play the source now
+  return source
+}
+
 // Promise: dispense reward (through audio control)
 function dispenseReward(){
   console.log('Legacy dispense reward')

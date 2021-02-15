@@ -9,6 +9,8 @@ constructor(samplingStrategy){
 	this.sampleq.index = []; 
 	this.sampleq.filename = [];
 	this.samplebucket = [];
+	
+	this.sound_sampleq = {'index': [], 'filename': []}
 	this.sound_samplebucket = [];
 
 	this.testq = {}
@@ -189,8 +191,8 @@ async generate_trials(n_trials){
 		
 		// Draw a sample sound, as well
 		var sound_sample_index = this.selectSampleStimulus(this.sound_samplebag_indices, this.samplingStrategy, false) // final argument is for <is_image>
-		var sound_sample_scenebag_label = this.sound_samplebag_labels[sample_index];
-		var sound_sample_scenebag_index = this.sound_samplebag_indices[sample_index];
+		var sound_sample_scenebag_label = this.sound_samplebag_labels[sound_sample_index];
+		var sound_sample_scenebag_index = this.sound_samplebag_indices[sound_sample_index];
 
 		var sound_sample_filename = [];
 		if (Array.isArray(IMAGES["Sample"][sound_sample_scenebag_label].SOUNDS.soundidx[sound_sample_scenebag_index])) {
@@ -239,6 +241,9 @@ async generate_trials(n_trials){
 		this.sampleq.index.push(sample_index)
 		this.sampleq.filename.push(sample_filename)
 
+		this.sound_sampleq.index.push(sound_sample_index)
+		this.sound_sampleq.filename.push(sound_sample_filename)
+
 		this.testq.indices.push(test_indices)
 		this.testq.correctIndex.push(correctIndex)
 
@@ -266,6 +271,8 @@ async get_next_trial(){
 	// DRAW FROM INDEX LIST
 	var sample_filename = this.sampleq.filename.shift(); 
 	var sample_index = this.sampleq.index.shift(); 
+	var sound_sample_filename = this.sound_sampleq.filename.shift();
+	var sound_sample_index = this.sound_sampleq.index.shift();
 	var test_filenames = this.testq.filenames.shift(); 
 	var test_indices = this.testq.indices.shift(); 
 	var test_correctIndex = this.testq.correctIndex.shift();
@@ -316,6 +323,12 @@ async get_next_trial(){
 		sample_reward = ImageRewardList[sample_filename]		
 	}
 	
+	if (typeof(sound_sample_filename) != "undefined"){
+		// at this point only having a single sound per trial,
+		// so this is simpler than the sample image code above
+		var sample_sound = await this.IB.get_by_name(sound_sample_filename)
+	}
+
 	if (typeof(test_filenames) != "undefined"){
 		var test_images = []
 		for (var i = 0; i <= test_filenames.length-1; i++){
@@ -357,12 +370,17 @@ async get_next_trial(){
 		test_scenebag_indices.push(this.testbag_indices[test_indices])
 	}
 
+	// Sample audio files, as well
+	// var sound_sample
+	// AK TODO
+
+
 	//make sample indexing into an array to be consistent with test for display code //XX
 	sample_index = [ sample_index ]
 	sample_scenebag_label = [ sample_scenebag_label ]
 	sample_scenebag_index = [ sample_scenebag_index ]
 
-	return	[sample_image, sample_index, test_images, test_indices, test_correctIndex, sample_scenebag_label, sample_scenebag_index, test_scenebag_labels, test_scenebag_indices, sample_reward]
+	return	[sample_image, sample_index, test_images, test_indices, test_correctIndex, sample_scenebag_label, sample_scenebag_index, test_scenebag_labels, test_scenebag_indices, sample_reward, sample_sound]
 // return [sample_image, sample_index]
 } //FUNCTION get_next_trial
 

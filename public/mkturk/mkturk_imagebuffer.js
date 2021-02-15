@@ -60,7 +60,7 @@ async cache_these_images(imagenames){
 			if (!(filename in this.cache_dict)){
 				is_wav_file = filename.split('.').pop()=='wav';
 				if (is_wav_file) {
-					var image = await loadSoundfromFirebase(filename);
+					var image = await loadSoundfromFirebaseForCache(filename);
 				}
 				else {
 					var image = await loadImagefromFirebase(filename);

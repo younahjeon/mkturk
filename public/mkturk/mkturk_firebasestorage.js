@@ -74,7 +74,7 @@ function loadSoundfromFirebaseForCache(fullpath){
 			reject('reject')
 		}//catch
 	})//promise
-} //loadSoundfromFirebase
+} //loadSoundfromFirebaseForCache
 
 
 
@@ -209,7 +209,7 @@ async function loadImageArrayfromFirebase(imagepathlist){
 				var partial_image_requests = []
 				for (var j = 0; j<partial_pathlist.length; j++){
 					// Note: At this point I'm hard-coding for the wav extension. May be nice to generalize, but this is a standalone func and doesn't have object properties...
-					is_wav_file = partial_pathlist[j][0].split('.').pop()=='wav'; // just take the first element of the list
+					let is_wav_file = partial_pathlist[j][0].split('.').pop()=='wav'; // just take the first element of the list
 					if (is_wav_file) { 
 						partial_image_requests.push(loadSoundfromFirebaseForCache(partial_pathlist[j]));
 					}
@@ -226,14 +226,16 @@ async function loadImageArrayfromFirebase(imagepathlist){
 		}
 		else { // If number of images is less than MAX_SIMULTANEOUS_REQUESTS, request them all simultaneously: 
 			for (var i = 0; i < 3; i++){
-				if (imagepathlist.length==0 || imagepathlist[0].split('.').pop()!='wav') {
+				let is_wav_file = imagepathlist.length==0 || imagepathlist[0].split('.').pop()!='wav'
+				if (is_wav_file) {
 					var image_requests = imagepathlist.map(loadImagefromFirebase);
+					console.log('FIREBASE: Buffering ' + imagepathlist.length + ' images');
 				}
 				else {
 					var image_requests = imagepathlist.map(loadSoundfromFirebaseForCache);
+					console.log('FIREBASE: Buffering ' + imagepathlist.length + ' sounds');
 				}
 				
-				console.log('FIREBASE: Buffering ' + imagepathlist.length + ' images')
 				var tstart = performance.now()
 				var image_array = await Promise.all(image_requests)
 				.catch(function(error){ console.log(error)}).then()
@@ -423,7 +425,7 @@ async function saveBehaviorDatatoFirebase(TASK, ENV, CANVAS, EVENTS){
 
 
 //------------- LOAD AUDIO --------------//
-function loadSoundfromFirebase(src,idx){
+function loadSoundfromFirebase(src,idx){ 
 	return new Promise(async function(resolve,reject){
 		try {
 			var fileRef = storage.ref().child(SOUND_FILEPREFIX + src + ".wav")
@@ -455,6 +457,8 @@ function loadSoundfromFirebase(src,idx){
 		}//catch
 	})//promise
 } //loadSoundfromFirebase
+
+
 
 
 //------------- GET RECENT BEHAVIOR FILE PATHS --------------//
