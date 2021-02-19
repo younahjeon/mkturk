@@ -1466,6 +1466,7 @@ if (ENV.BatteryAPIAvailable) {
         CURRTRIAL.samplefixationxyt = [];
         CURRTRIAL.samplestarttime = Date.now() - ENV.CurrentDate.valueOf();
         CURRTRIAL.samplestarttime_string = new Date(CURRTRIAL.samplestarttime).toJSON();
+        samplesound_source = playSoundFromBuffer(CURRTRIAL.samplesound);
         await displayTrial(
           CURRTRIAL.tsequence,
           CURRTRIAL.sequencegridindex,
@@ -1474,6 +1475,8 @@ if (ENV.BatteryAPIAvailable) {
           CURRTRIAL.sequencelabel,
           CURRTRIAL.sequenceindex,
         );
+        // the sound is a 2nd-class citizen at this point and just killed when others are killed
+        samplesound_source.stop()
       }
 
       logEVENTS("SampleFixationTouchEvent", CURRTRIAL.samplefixationtouchevent, "trialseries");
