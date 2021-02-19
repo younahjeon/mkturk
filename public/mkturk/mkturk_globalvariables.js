@@ -206,7 +206,9 @@ CURRTRIAL.reset = function(){
 	this.sample_scenebag_label = []
 	this.sample_scenebag_index = []
 	this.test_scenebag_labels = []
-	this.test_scenebag_indices = []	
+	this.test_scenebag_indices = []
+
+	this.samplesound = [];	
 }
 CURRTRIAL.reset()
 

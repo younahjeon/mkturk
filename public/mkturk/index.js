@@ -384,7 +384,7 @@ if (ENV.BatteryAPIAvailable) {
 	//================== AWAIT USER CAN EDIT SUBJECT PARAMS ==================//
 	if (QuickLoad.load == 0) {
 		updateStatusText(JSON.stringify(TASK, null, ' '));
-    document.querySelector("p[id=headsuptext]").setAttribute("contentEditable", true);
+    	document.querySelector("p[id=headsuptext]").setAttribute("contentEditable", true);
 		document.querySelector("button[id=doneEditingParams]").style.display = "block";
 		document.querySelector("button[id=doneEditingParams]").style.visibility = "visible";
 
@@ -475,6 +475,7 @@ if (ENV.BatteryAPIAvailable) {
 	//============= AWAIT LOAD SOUNDS =============//
 	soundpromises = sounds.serial.map(loadSoundfromFirebase); //create array of sound load Promises
 	await Promise.all(soundpromises); //simultaneously evaluate array of sound load promises
+
 	updateStatusText("");
 
   //============= AWAIT ESTIMATE SCREEN REFRESH RATE =========//
@@ -709,6 +710,7 @@ if (ENV.BatteryAPIAvailable) {
       // 5: animate <--> render loop within trial
 
       //============ 0: LOAD SCENES from JSON ============//
+      // Note that the sounds are also in the SceneFiles
       for (let i = 0; i < TASK.ImageBagsSample.length; i++) {
         IMAGES.Sample[i] = await loadTextfromFirebase(TASK.ImageBagsSample[i]);
       }
@@ -717,15 +719,19 @@ if (ENV.BatteryAPIAvailable) {
         IMAGES.Test[i] = await loadTextfromFirebase(TASK.ImageBagsTest[i]);
       }
 
-      // find the longest scene param arry in IMAGES (ie # of trials)
+      // find the longest scene param array in IMAGES (ie # of trials)
       for (let i = 0; i < IMAGES.Sample.length; i++) {
         IMAGES.Sample[i].nimages = getLongestArray(IMAGES.Sample[i]);
         IMAGES.Test[i].nimages = getLongestArray(IMAGES.Test[i]);
 
-        //Determine if images will also be rendered
-			  IMAGES.Sample[i].nbackgroundimages = IMAGES.Sample[i].IMAGES.imageidx.length;
+        // Determine if images will also be rendered
+		IMAGES.Sample[i].nbackgroundimages = IMAGES.Sample[i].IMAGES.imageidx.length;
         IMAGES.Test[i].nbackgroundimages = IMAGES.Test[i].IMAGES.imageidx.length;
         
+		// Determine if sounds will also be played -- but don't require the scenefile to have a SOUNDS field
+		IMAGES.Sample[i].nsounds = (typeof IMAGES.Sample[i].SOUNDS == "undefined") ? 0 : IMAGES.Sample[i].SOUNDS.soundidx.length; 
+		// AK TODO: implement for test, as well
+
         FLAGS.movieper['Sample'][i] = [];
         FLAGS.movieper['Test'][i] = [];
       }
@@ -840,6 +846,8 @@ if (ENV.BatteryAPIAvailable) {
       CURRTRIAL.sampleindex_nonarray[i] = x[1][0];
       CURRTRIAL.sample_scenebag_label[i] = x[5];
       CURRTRIAL.sample_scenebag_index[i] = x[6];
+
+      CURRTRIAL.samplesound = x[10]; // the buffer is being passed around here
 
       // Test can have multiple simultaneous scenes (items are over space; ev, MtS)
       if (i == 0) { // IF first image
@@ -1388,7 +1396,7 @@ if (ENV.BatteryAPIAvailable) {
         }
       }
 
-          //Display Sample & Test/Choice
+      //Display Sample & Test/Choice
       if (TASK.NRSVP > 0 && TASK.FixationWindowSizeInches > 0) { // IF RSVP, hold sample fixation
         let fixationWindowBoundingBox = (
           getFixationWindowBoundingBox(CURRTRIAL.samplegridindex, ENV.FixationWindowRadius)
@@ -1414,6 +1422,9 @@ if (ENV.BatteryAPIAvailable) {
           CURRTRIAL.sequencelabel,
           CURRTRIAL.sequenceindex,
         );
+
+        samplesound_source = playSoundFromBuffer(CURRTRIAL.samplesound);
+
         CURRTRIAL.samplestarttime = Date.now() - ENV.CurrentDate.valueOf();
         CURRTRIAL.samplestarttime_string = new Date(CURRTRIAL.samplestarttime).toJSON();
         let race_return = await Promise.race([p1, p2]);
@@ -1426,6 +1437,9 @@ if (ENV.BatteryAPIAvailable) {
           frame.shown[frame.current] = 1;
           await moviefinish_promise();
         }
+
+        // the sound is a 2nd-class citizen at this point and just killed when others are killed
+        samplesound_source.stop()
 
         if (FLAGS.trackeye > 0) {
           ENV.Eye.EventType = 'eyestart'; // Reset eye state
