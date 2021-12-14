@@ -1331,20 +1331,30 @@ async function saveScreenshot(
   fullpath_mesh = fullpath + ".glb";
   fullpath = fullpath + ".png";
 
-  canvasobj.toBlob(function (blob) {
-    try {
-      var response = storage.ref().child(fullpath).put(blob);
-      console.log("saved image: " + fullpath);
-      console.log(
-        "FIREBASE: Successful image file upload. Size:" +
-          Math.round(response.blob_.size_ / 1000) +
-          "kb"
-      );
-    } catch (error) {
-      //TRY
-      console.log(error);
-    }
-  }); //.toBlob function
+  let imgData = canvasobj
+    .getContext("2d")
+    .getImageData(0, 0, canvasobj.width, canvasobj.height);
+  let worker = new Worker("tmpWorker.js");
+
+  worker.postMessage({
+    image: imgData,
+    quality: 100,
+    path: fullpath,
+  });
+
+  // canvasobj.toBlob(function (blob) {
+  //   try {
+  //     var response = storage.ref().child(fullpath).put(blob);
+  //     console.log("saved image: " + fullpath);
+  //     console.log(
+  //       "FIREBASE: Successful image file upload. Size:" +
+  //         Math.round(response.blob_.size_ / 1000) +
+  //         "kb")
+  //   } catch (error) {
+  //     //TRY
+  //     console.log(error);
+  //   }
+  // }); //.toBlob function
 
   // save mesh if morph
   let objToSave = Object.keys(
