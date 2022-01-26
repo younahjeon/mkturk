@@ -1316,7 +1316,7 @@ async function saveScreenshot(
     ENV.DeviceName +
     '_device';
 
-  console.log('scenefolder:', scenefolder);
+  // console.log('scenefolder:', scenefolder);
 
   if (canvasobj.width > 4096 || canvasobj.height > 4096) {
     console.log(
@@ -1373,7 +1373,9 @@ async function saveScreenshot(
   //     console.log(error);
   //   }
   // }); //.toBlob function
-  let imgFileName = fullpath.split('/')[4];
+  // console.log('fullpath:', fullpath);
+  let imgFileNameSplit = fullpath.split('/');
+  let imgFileName = imgFileNameSplit[imgFileNameSplit.length - 1];
   let dirNameSplit = scenefolder.split('/');
   let dirName = dirNameSplit[dirNameSplit.length - 1];
   // console.log('dirname:', dirName);
