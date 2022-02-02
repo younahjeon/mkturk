@@ -11,6 +11,12 @@ if (!ENV.MTurkWorkerId) {
   }
 }
 
+window.addEventListener('beforeunload', async (evt) => {
+  if (port.connected) {
+    await port.writeSampleCommandTriggertoUSB('0');
+  }
+});
+
 // Button callbacks for inline connection to arduino device
 document.querySelector('button[id=googlesignin]').style.display = 'block';
 document.querySelector('button[id=googlesignin]').style.visibility = 'visible';
@@ -763,6 +769,9 @@ if (ENV.BatteryAPIAvailable) {
   while (true) {
     //============= AWAIT LOAD PARAMS =============//
     if (FLAGS.need2loadParameters == 1) {
+      if (port.connected) {
+        port.writeSampleCommandTriggertoUSB('0');
+      }
       FLAGS.need2loadParameters = await loadParametersfromFirebase(
         ENV.ParamFileName
       );
@@ -893,6 +902,11 @@ if (ENV.BatteryAPIAvailable) {
       //Fixation dot, if >0, will appear on both fixation & sample screens
       ENV.FixationDotRadius =
         (TASK.FixationDotSizeInches / 2) * ENV.ViewportPPI;
+
+      if (TASK.FixationDotSizeInches !== undefined) {
+        ENV.FixationSquareWidth = TASK.FixationDotSizeInches * ENV.ViewportPPI;
+        ENV.FixationSquareColor = 'white';
+      }
 
       //Fixation window, if specified, operates on both fixation & sample screens
       ENV.FixationWindowRadius =
@@ -2601,9 +2615,9 @@ if (ENV.BatteryAPIAvailable) {
     //================= (end) HOUSEKEEPING =================//
 
     updateHeadsUpDisplay();
-    console.log('END OF TRIAL ', CURRTRIAL.num);
-    CURRTRIAL.num++;
-    EVENTS.trialnum = CURRTRIAL.num;
+    // console.log('END OF TRIAL ', CURRTRIAL.num);
+    // CURRTRIAL.num++;
+    // EVENTS.trialnum = CURRTRIAL.num;
 
     if (typeof TASK.InterTrialInterval != 'undefined') {
       let remainingInterTrialInterval =
@@ -2612,5 +2626,9 @@ if (ENV.BatteryAPIAvailable) {
         await sleep(remainingInterTrialInterval);
       }
     }
+
+    console.log('END OF TRIAL ', CURRTRIAL.num);
+    CURRTRIAL.num++;
+    EVENTS.trialnum = CURRTRIAL.num;
   }
 })();

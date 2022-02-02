@@ -346,11 +346,14 @@ function logEVENTS(eventname, eventval, eventtype) {
   }
 }
 
-function purgeTrackingVariables() {
+function purgeTrackingVariables(src) {
   // Purges heresies committed in the test period
   EVENTS.reset_timeseries();
 
-  ENV.CurrentDate = new Date();
+  if (src !== 'donePractice') {
+    ENV.CurrentDate = new Date();
+  }
+
   var datestr = ENV.CurrentDate.toISOString();
   if (ENV.MTurkWorkerId) {
     ENV.DataFileName = `${DATA_SAVEPATH}${datestr.slice(

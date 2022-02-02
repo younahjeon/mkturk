@@ -109,17 +109,6 @@ function displayTrial(ti, gr, fr, sc, ob, id, mkm) {
                 boundingBoxes2D: boundingBoxesChoice2D,
               };
 
-              // let mkmBoundingBox = mkm.getMkModelBoundingBox(params);
-              // console.log('mkmBoundingBox:', mkmBoundingBox);
-
-              // mkmBoundingBox SANITY CHECK CODE
-              // console.log(`SAMPLE sx=${mkmBoundingBox.sx}; sy=${mkmBoundingBox.sy}; sWidth=${mkmBoundingBox.sWidth}; sHeight=${mkmBoundingBox.sHeight}`);
-              // let visiblecvs = document.getElementById("canvaseyetracker");
-              // let ctx2 = visiblecvs.getContext('2d');
-              // ctx2.clearRect(0, 0, EYETRACKERCANVAS.width, EYETRACKERCANVAS.height);
-              // ctx2.rect(mkmBoundingBox.sx, mkmBoundingBox.sy, mkmBoundingBox.sWidth, mkmBoundingBox.sHeight);
-              // ctx2.stroke();
-
               ctx.drawImage(
                 VISIBLECANVAS,
                 mkmBoundingBox.sx,
@@ -725,7 +714,7 @@ function renderShape2D(sc, gr, canvasobj) {
         renderSquareOnCanvas(
           ENV.FixationDotColor,
           gr,
-          2 * ENV.FixationDotRadius,
+          ENV.FixationSquareWidth,
           canvasobj
         );
       }
@@ -856,39 +845,50 @@ function getFixationWindowBoundingBox(gridindex, rad) {
   return [xbound, ybound];
 } //FUNCTION getFixationWindowBoundingBox
 
-function renderSquareOnCanvas(color, gridindex, square_pixelwidth, canvasobj) {
+function renderSquareOnCanvas(color, gridIdx, square_pixelwidth, canvasobj) {
   // Draw Square
-  var context = canvasobj.getContext('2d');
+  const ctx = canvasobj.getContext('2d');
 
-  if (Array.isArray(gridindex)) {
-    var xcent = gridindex[0] / ENV.CanvasRatio;
-    var ycent = gridindex[1] / ENV.CanvasRatio;
-  } //IF x,y coord provided
-  else {
-    var xcent = ENV.XGridCenter[gridindex] / ENV.CanvasRatio;
-    var ycent = ENV.YGridCenter[gridindex] / ENV.CanvasRatio;
-  } //IF gridindex provided
-  var wd = ENV.FixationDotRadius / ENV.CanvasRatio;
+  let xCenter;
+  let yCenter;
 
-  context.fillStyle = color;
-  context.fillRect(xcent - wd / 2, ycent - wd / 2, wd, wd);
+  if (Array.isArray(gridIdx)) {
+    // IF x, y coord provided
+    xCenter = gridIdx[0] / ENV.CanvasRatio;
+    yCenter = gridIdx[1] / ENV.CanvasRatio;
+  } else {
+    // IF gridIdx provided
+    xCenter = ENV.XGridCenter[gridIdx] / ENV.CanvasRatio;
+    yCenter = ENV.YGridCenter[gridIdx] / ENV.CanvasRatio;
+  }
+
+  const displayWidth = square_pixelwidth / ENV.CanvasRatio;
+
+  ctx.fillStyle = color;
+  ctx.fillRect(
+    xCenter - displayWidth / 2,
+    yCenter - displayWidth / 2,
+    displayWidth,
+    displayWidth
+  );
 
   // Define (rectangular) boundaries of fixation
   // Bounding boxes of dot on canvas
-  xbound = [
-    (xcent - wd / 2) * ENV.CanvasRatio,
-    (xcent + wd / 2) * ENV.CanvasRatio,
+
+  const xBound = [
+    (xCenter - displayWidth / 2) * ENV.CanvasRatio,
+    (xCenter + displayWidth / 2) * ENV.CanvasRatio,
   ];
-  ybound = [
-    (ycent - wd / 2) * ENV.CanvasRatio,
-    (ycent + wd / 2) * ENV.CanvasRatio,
+  const yBound = [
+    (yCenter - displayWidth / 2) * ENV.CanvasRatio,
+    (yCenter + displayWidth / 2) * ENV.CanvasRatio,
   ];
 
-  xbound[0] = xbound[0] + CANVAS.offsetleft;
-  xbound[1] = xbound[1] + CANVAS.offsetleft;
-  ybound[0] = ybound[0] + CANVAS.offsettop;
-  ybound[1] = ybound[1] + CANVAS.offsettop;
-  return [xbound, ybound];
+  xBound[0] = xBound[0] + CANVAS.offsetleft;
+  xBound[1] = xBound[1] + CANVAS.offsetleft;
+  yBound[0] = yBound[0] + CANVAS.offsettop;
+  yBound[1] = yBound[1] + CANVAS.offsettop;
+  return [xBound, yBound];
 } //FUNCTION renderSquareOnCanvas
 
 function renderTriangleOnCanvas(
