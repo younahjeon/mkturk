@@ -370,7 +370,7 @@ function doneTestingTask_listener(event) {
   console.log('START SAVING DATA');
   FLAGS.savedata = 1;
   FLAGS.purge = 1;
-  purgeTrackingVariables();
+  purgeTrackingVariables('donePractice');
   FLAGS.purge = 0;
 
   document.querySelector('p[id=imageloadingtext]').style.display = 'none'; //if do style.visibility=hidden, element will still occupy space

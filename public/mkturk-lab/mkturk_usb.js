@@ -177,6 +177,12 @@ serial.Port.prototype.onReceive = (data) => {
         onReceiveTime - ENV.CurrentDate.valueOf(),
         'trialseries'
       );
+    } else if (textReceived.includes('0')) {
+      logEVENTS(
+        'SampleCommandOffReturnTime',
+        onReceiveTime - ENV.CurrentDate.valueOf(),
+        'trialseries'
+      );
     } //IF 1
     return;
   } //IF "sa", samplecommand

@@ -485,7 +485,7 @@ async function saveBehaviorDatatoFirebase(TASK, ENV, CANVAS, EVENTS) {
     let dataFileName = ENV.DataFileName.split('/')
       .slice(-1)[0]
       .replaceAll(':', '_');
-    console.log(dataFileName);
+    // console.log(dataFileName);
     let dataFileHandle = await FLAGS.DirHandle.getFileHandle(dataFileName, {
       create: true,
     });
