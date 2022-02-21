@@ -174,6 +174,7 @@ async function queryDevice(deviceName, queryField) {
     deviceConfig.frameRateMovie =
       doc.data().frameRateMovie === undefined ? -1 : doc.data().frameRateMovie;
     deviceConfig.isEmpty = false;
+    console.log('deviceConfig:', deviceConfig);
     return deviceConfig;
   }
 }
